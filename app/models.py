@@ -32,6 +32,23 @@ class Author(db.Model):
         else:
             return self.query.get(id[0])
 
+    def update(self, author_id, author_name, author_lastname):
+        author = self.query.get(author_id)
+        if len(author.bibliographies) > 1:
+            authors = self.query.filter_by(lastname=author_lastname).all()
+            if authors is not None:
+                for names in authors:
+                    if names.name == author_name:
+                        return names
+                author = Author(name=author_name, lastname=author_lastname)
+                db.session.add(author)
+                db.session.commit()
+                return author
+        author.name = author_name
+        author.lastname = author_lastname
+        db.session.commit()
+        return author
+
     def __str__(self):
         return f"Author <{self.name} {self.lastname}, id: {self.id}>"
 
@@ -53,20 +70,41 @@ class Book(db.Model):
         if t is not None:
             return t.id
 
+    def get_authors(self, book_id):
+        book = self.query.get(book_id)
+        author = book.authors
+        authors = [{'name': names.name, 'lastname': names.lastname} for names in author]
+        return authors
+
+    def get_one(self, book_id: int):
+        book = self.query.get(book_id)
+        author = book.get_authors(book.id)
+        genre = Genre.query.get(book.genre_id)
+        publisher = Publisher.query.get(book.publisher_id)
+        status = BorrowedBookCard().get_status(book.id)
+        book = {
+            'id': book.id,
+            'title': book.title,
+            'author_name': author[0]['name'],
+            'author_lastname': author[0]['lastname'],
+            'genre': genre.genre.capitalize(),
+            'publisher': publisher.name.title(),
+            'rating': book.rating,
+            'description': book.description,
+            'status': status
+        }
+        return book
+
     def get_all(self):
         books = []
 
         for book in self.query.all():
-            author = book.authors
-            authors = [f"{names.name} {names.lastname}" for names in author]
-            authors = ', '.join(authors)
+            authors = self.get_authors(book.id)
+            author = [f"{name['name']} {name['lastname']}" for name in authors]
+            authors = ', '.join(author)
             genre = Genre.query.get(book.genre_id)
             publisher = Publisher.query.get(book.publisher_id)
-            status = 'na półce'
-            if book.borrowed_book_card_id is not None:
-                card = BorrowedBookCard.query.get(book.borrowed_book_card_id)
-                if card.borrowed is True:
-                    status = 'pożyczona'
+            status = BorrowedBookCard().get_status(book.id)
             books.append({
                 'id': book.id,
                 'title': book.title,
@@ -95,14 +133,39 @@ class Book(db.Model):
 
     def add_book(self, details):
 
-        author = Author().add_author(author_name=details['author_name'], author_lastname=details['author_lastname'])
-        genre = Genre().add_genre(genre=details['genre'])
-        publisher = Publisher().add_publisher(publisher=details['publisher'])
         book = self.add_title(title=details['title'], rating=details['rating'], description=details['description'])
 
+        if all([
+            details['author_name'] is not None,
+            details['author_lastname'] is not None
+        ]):
+            author = Author().add_author(author_name=details['author_name'], author_lastname=details['author_lastname'])
+            book.authors.append(author)
+        if details['genre'] is not None:
+            genre = Genre().add_genre(genre=details['genre'])
+            genre.books.append(book)
+        if details['publisher'] is not None:
+            publisher = Publisher().add_publisher(publisher=details['publisher'])
+            publisher.books.append(book)
+        db.session.commit()
+
+    def book_update(self, book_id, details):
+        book = self.query.get(book_id)
+        genre = Genre().update(book.genre_id, details['genre'])
+        publisher = Publisher().update(book.publisher_id, details['publisher'])
+        author = Author().update(book.authors[0].id, details['author_name'], details['author_lastname'])
+        book.authors.clear()
         book.authors.append(author)
-        genre.books.append(book)
-        publisher.publish.append(book)
+        book.publisher_id = publisher.id
+        book.genre_id = genre.id
+        book.title = details['title']
+        book.rating = details['rating']
+        book.description = details['description']
+        db.session.commit()
+
+    def delete_book(self, book_id):
+        book = self.query.get(book_id)
+        db.session.delete(book)
         db.session.commit()
 
 
@@ -110,7 +173,7 @@ class Borrower(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(20), index=True)
     lastname = db.Column(db.String(30), index=True)
-    borrow = db.relationship("BorrowedBookCard", backref="borrow", lazy="dynamic")
+    borrow = db.relationship("BorrowedBookCard", backref="borrow", lazy='subquery')
 
     def __str__(self):
         return f"Borrower <{self.name} {self.lastname}>"
@@ -124,7 +187,15 @@ class BorrowedBookCard(db.Model):
     date_of_borrow = db.Column(db.Date, default=date.today())
     date_of_return = db.Column(db.Date)
     borrowed = db.Column(db.Boolean)
-    lend = db.relationship("Book", backref="lend", lazy="dynamic")
+    lend = db.relationship("Book", backref="lend", lazy='subquery')
+
+    def get_status(self, book_id):
+        book = self.query.get(book_id)
+        if book is not None:
+            card = self.query.get(book.borrowed_book_card_id)
+            if card.borrowed is True:
+                return 'pożyczona'
+        return 'na półce'
 
     def __str__(self):
         return f"Borrow <{self.borrowed}>"
@@ -133,7 +204,7 @@ class BorrowedBookCard(db.Model):
 class Publisher(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), index=True, unique=True)
-    publish = db.relationship("Book", backref="publish", lazy="dynamic")
+    books = db.relationship("Book", backref="publish", lazy='subquery')
 
     def is_in_base(self, publisher_name):
         publisher = self.query.filter_by(name=publisher_name).first()
@@ -150,6 +221,24 @@ class Publisher(db.Model):
         else:
             return self.query.get(id)
 
+    def delete(self, publisher_id):
+        publisher = self.query.get(publisher_id)
+        db.session.delete(publisher)
+        db.session.commit()
+
+    def update(self, publisher_id, name):
+        publisher = self.query.get(publisher_id)
+        if self.query.filter_by(name=name) is not None:
+            if len(publisher.books) > 1:
+                publisher = Publisher(name=name)
+                db.session.add(publisher)
+                db.session.commit()
+                return publisher
+            return self.query.filter_by(name=name).first()
+        publisher.name = name
+        db.session.commit()
+        return publisher
+
     def __str__(self):
         return f"Publisher <{self.name}, id: {self.id}>"
 
@@ -157,7 +246,7 @@ class Publisher(db.Model):
 class Genre(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     genre = db.Column(db.String(50), index=True, unique=True)
-    books = db.relationship("Book", backref="books", lazy="dynamic")
+    books = db.relationship("Book", backref="genre", lazy='subquery')
 
     def is_in_base(self, genre_name):
         genre = self.query.filter_by(genre=genre_name).first()
@@ -173,6 +262,24 @@ class Genre(db.Model):
             return genre
         else:
             return self.query.get(id)
+
+    def delete(self, genre_id):
+        genre = self.query.get(genre_id)
+        db.session.delete(genre)
+        db.session.commit()
+
+    def update(self, genre_id, name):
+        genre = self.query.get(genre_id)
+        if self.query.filter_by(genre=name) is not None:
+            if len(genre.books) > 1:
+                genre = Genre(genre=name)
+                db.session.add(genre)
+                db.session.commit()
+                return genre
+            return self.query.filter_by(genre=name).first()
+        genre.genre = name
+        db.session.commit()
+        return genre
 
     def __str__(self):
         return f"Genre <{self.genre}, id: {self.id}>"
