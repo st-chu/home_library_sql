@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Domowa biblioteka</title>
+    <style>
+        table, th, tr, td {border: 2px solid blue;}
+    </style>
+</head>
+
+<h2>Katalog książek</h2>
+
+<table>
+    <thead>
+    <th>Autor</th>
+    <th>Tytuł</th>
+    <th>Gatunek</th>
+    <th>Wydawnictwo</th>
+    <th>Opis</th>
+    <th>Status</th>
+    <th>Ocena</th>
+    </thead>
+{% for book in books %}
+    <tr>
+        <td><a href="/library/{{ book.id }}">{{ book.author }}</a></td>
+        <td>{{ book.title }}</td>
+        <td>{{ book.genre }}</td>
+        <td>{{ book.publisher }}</td>
+        <td>{{ book.description }}</td>
+        <td>{{ book.status }}</td>
+        <td>{{ book.rating }}</td>
+    </tr>
+{% endfor %}
+</table>
+<div>
+    <h2> Dodaj nowy tytuł: </h2>
+    <form method="POST" action="/library/">
+        {{ form.hidden_tag() }}
+
+        {% for field in form  if field.widget.input_type != 'hidden'%}
+        {{ field.label }} {% if field.flags.required %}*{% endif %}
+        {{ field }}<br>
+        {% endfor %}
+        <input type="submit" value="Dodaj">
+    </form>
+</div>
+</body>
+</html>

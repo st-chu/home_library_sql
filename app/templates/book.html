@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Szczegóły książki</title>
+</head>
+<body>
+    <h2> Zmień: </h2>
+    <form method="POST" action="/library/{{ book_id }}/">
+        {{ form.hidden_tag() }}
+        {% for field in form if field.widget.input_type != 'hidden' %}
+        {{ field.label }} {% if field.flags.required %}*{% endif %}
+        {{ field }} <br>
+        {% endfor %}
+
+        <input type="submit" value="Zmień">
+    </form>
+</body>
+</htm
