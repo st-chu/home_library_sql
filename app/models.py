@@ -186,11 +186,11 @@ class Borrower(db.Model):
     def add_borrower(self, borrower_name, borrower_lastname):
         _id = self.is_in_base(borrower_name=borrower_name.title(), borrower_lastname=borrower_lastname.title())
         if not bool(_id):
-            borrower = Author(name=borrower_name.title(), lastname=borrower_lastname.title())
+            borrower = Borrower(name=borrower_name.title(), lastname=borrower_lastname.title())
             db.session.add(borrower)
             db.session.commit()
             return borrower
-        return self.query.get(_id[0])
+        return self.query.get(_id)
 
     def __str__(self):
         return f"Borrower <{self.name} {self.lastname}>"
@@ -201,10 +201,33 @@ class BorrowedBookCard(db.Model):
     book_id = db.Column(db.Integer)
     borrower_id = db.Column(db.Integer, db.ForeignKey('borrower.id'))
     date_of_loan = db.Column(db.Date)
-    date_of_borrow = db.Column(db.Date, default=date.today())
+    date_of_borrow = db.Column(db.Date)
     date_of_return = db.Column(db.Date)
     borrowed = db.Column(db.Boolean)
     lend = db.relationship("Book", backref="lend", lazy='subquery')
+
+    def is_in_base(self, book_id):
+        card = self.query.filter_by(book_id=book_id).first()
+        if card is not None:
+            return card.id
+
+    def add_card(self, book_id):
+        book = Book().gery.get(book_id)
+        _id = self.is_in_base(book_id)
+        if not bool(_id):
+            card = BorrowedBookCard(borrowed=False)
+            card.lend.append(book)
+            db.session.add(card)
+            db.session.commit()
+            return card
+        return self.query.get(_id)
+
+    def borrow(self, book_id, borrower_name, borrower_lastname):
+        card = self.add_card(book_id)
+        borrower = Borrower().add_borrower(borrower_name, borrower_lastname)
+        borrower.borrow.append(card)
+        card.borrowed = True
+        db.session.commit()
 
     def get_status(self, book_id):
         book = self.query.get(book_id)
