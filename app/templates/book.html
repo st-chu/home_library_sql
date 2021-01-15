@@ -5,15 +5,23 @@
     <title>Szczegóły książki</title>
 </head>
 <body>
-    <h2> Zmień: </h2>
+    <h2> {{ book.author_name }} {{ book.author_lastname }} "{{ book.title }}" </h2>
     <form method="POST" action="/library/{{ book_id }}/">
         {{ form.hidden_tag() }}
-        {% for field in form if field.widget.input_type != 'hidden' %}
-        {{ field.label }} {% if field.flags.required %}*{% endif %}
+        {% for field in form if field.widget.input_type != 'hidden' %}<br>
+        {{ field.label }} {% if field.flags.required %}*{% endif %},
         {{ field }} <br>
-        {% endfor %}
+        {% endfor %}<br>
 
         <input type="submit" value="Zmień">
+    </form><br>
+    <form method="POST" action="/delete/{{ book.id }}/">
+        <input type="submit" value="Usuń">
+    </form>
+    <p>Status książki: <span style="color: lime">{{ book.status.upper() }}</span></p>
+
+    <form method="POST" action="/borrow/{{ book.id }}/">
+        <input type="submit" value="Pożycz">
     </form>
 </body>
-</htm
+</html
