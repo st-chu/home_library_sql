@@ -37,6 +37,7 @@ class Author(db.Model):
     def update(self, author_id: int, author_name: str, author_lastname: str) -> object:
         """changes author's data and returns it, if author has more than one book, creates new author and returns him"""
         author = self.query.get(author_id)
+        author_in_base_id = self.is_in_base(author_name=author_name, author_lastname=author_lastname)
         if len(author.bibliographies) > 1 and any([
             author.name != author_name,
             author.lastname != author_lastname
@@ -45,6 +46,8 @@ class Author(db.Model):
             db.session.add(author)
             db.session.commit()
             return author
+        if bool(author_in_base_id):
+            return self.query.get(author_in_base_id)
         author.name = author_name
         author.lastname = author_lastname
         db.session.commit()
@@ -302,11 +305,14 @@ class Publisher(db.Model):
         """changes the publisher's data and returns the publisher,
         if the publisher has more than one book, add a new publisher to the database and return it"""
         publisher = self.query.get(publisher_id)
+        publisher_in_base_id = self.is_in_base(publisher_name=name)
         if len(publisher.books) > 1 and publisher.name != name:
             publisher = Publisher(name=name)
             db.session.add(publisher)
             db.session.commit()
             return publisher
+        if bool(publisher_in_base_id):
+            return self.query.get(publisher_in_base_id)
         publisher.name = name
         db.session.commit()
         return publisher
@@ -345,11 +351,14 @@ class Genre(db.Model):
     def update(self, genre_id: int, name: str):
         """renames genre and returns them, if there are more books in the genre, creates new ones and returns them"""
         genre = self.query.get(genre_id)
+        genre_is_in_base_id = self.is_in_base(genre_name=name)
         if len(genre.books) > 1 and genre.genre != name:
             genre = Genre(genre=name)
             db.session.add(genre)
             db.session.commit()
             return genre
+        if bool(genre_is_in_base_id):
+            return self.query.get(genre_is_in_base_id)
         genre.genre = name
         db.session.commit()
         return genre
