@@ -59,6 +59,26 @@ def book_update(book_id):
 
 @app.route("/delete/<int:book_id>/", methods=['POST'])
 def delete_book(book_id):
-    print(book_id)
     Book().delete(book_id)
     return redirect(url_for('library'))
+
+
+@app.route("/library/lend/<int:book_id>/", methods=['GET'])
+def lend(book_id):
+    form = Borrow()
+    return render_template('lend.html', form=form, book_id=book_id)
+
+
+@app.route("/borrow/<int:book_id>/", methods=['POST'])
+def borrow(book_id):
+    form = Borrow()
+    data = form.data
+    print(data)
+    print(book_id)
+    # print(BorrowedBookCard.is_in_base(book_id))
+    if form.validate_on_submit():
+        BorrowedBookCard().borrow_book(book_id, data['borrower_name'], data['borrower_lastname'])
+        return redirect(url_for('book_details', book_id=book_id))
+    return redirect(url_for('book_details', book_id=book_id))
+
+

@@ -80,7 +80,7 @@ class Book(db.Model):
         author = book.get_authors(book.id)
         genre = Genre.query.get(book.genre_id)
         publisher = Publisher.query.get(book.publisher_id)
-        status = BorrowedBookCard().get_status(book.id)
+        status = self.get_status(book_id)
         book = {
             'id': book.id,
             'title': book.title,
@@ -94,6 +94,16 @@ class Book(db.Model):
         }
         return book
 
+    # def get_status(self, book_id):
+    #     book = self.query.get(book_id)
+    #     card_id = BorrowedBookCard().query.get(book.borrowed_book_card_id)
+    #     if bool(card_id) is True:
+    #         card = BorrowedBookCard().query.get(card_id)
+    #         if card:
+    #             return "pożyczona"
+    #         return 'na półce'
+    #     return 'na półce'
+
     def get_all(self):
         books = []
 
@@ -103,7 +113,7 @@ class Book(db.Model):
             authors = ', '.join(author)
             genre = Genre.query.get(book.genre_id).genre
             publisher = Publisher.query.get(book.publisher_id).name
-            status = BorrowedBookCard().get_status(book.id)
+            status = self.get_status(book.id)
             books.append({
                 'id': book.id,
                 'title': book.title,
@@ -212,7 +222,7 @@ class BorrowedBookCard(db.Model):
             return card.id
 
     def add_card(self, book_id):
-        book = Book().gery.get(book_id)
+        book = Book().query.get(book_id)
         _id = self.is_in_base(book_id)
         if not bool(_id):
             card = BorrowedBookCard(borrowed=False)
@@ -222,20 +232,21 @@ class BorrowedBookCard(db.Model):
             return card
         return self.query.get(_id)
 
-    def borrow(self, book_id, borrower_name, borrower_lastname):
+    def borrow_book(self, book_id, borrower_name, borrower_lastname):
         card = self.add_card(book_id)
         borrower = Borrower().add_borrower(borrower_name, borrower_lastname)
         borrower.borrow.append(card)
         card.borrowed = True
         db.session.commit()
+        return borrower
 
-    def get_status(self, book_id):
-        book = self.query.get(book_id)
-        if book is not None:
-            card = self.query.get(book.borrowed_book_card_id)
-            if card.borrowed is True:
-                return 'pożyczona'
-        return 'na półce'
+    # def get_status(self, book_id):
+    #     book = self.query.get(book_id)
+    #     if book is not None:
+    #         card = self.query.get(book.borrowed_book_card_id)
+    #         if card.borrowed is True:
+    #             return 'pożyczona'
+    #     return 'na półce'
 
     def __str__(self):
         return f"Borrow <{self.borrowed}>"

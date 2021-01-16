@@ -20,7 +20,7 @@
     </form>
     <p>Status książki: <span style="color: lime">{{ book.status.upper() }}</span></p>
 
-    <form method="POST" action="/borrow/{{ book.id }}/">
+    <form method="GET" action="/library/lend/{{ book.id }}/">
         <input type="submit" value="Pożycz">
     </form>
 </body>
