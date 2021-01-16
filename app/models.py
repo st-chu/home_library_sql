@@ -239,14 +239,17 @@ class BorrowedBookCard(db.Model):
         book.borrowed_book_card_id = card.id
         card.borrowed = True
         db.session.commit()
-        return borrower
+
+    def give_back_book(self, book_id):
+        card = self.add_card(book_id)
+        card.borrowed = False
+        card.borrower_id = None
+        db.session.commit()
 
     def get_status(self, book_id):
         book = Book().query.get(book_id)
         card_id = book.borrowed_book_card_id
-        print(card_id)
         if card_id:
-            print('poz')
             card = self.query.get(card_id)
             if card.borrowed is True:
                 return 'pożyczona'

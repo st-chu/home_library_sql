@@ -73,12 +73,14 @@ def lend(book_id):
 def borrow(book_id):
     form = Borrow()
     data = form.data
-    print(data)
-    print(book_id)
-    # print(BorrowedBookCard.is_in_base(book_id))
     if form.validate_on_submit():
         BorrowedBookCard().borrow_book(book_id, data['borrower_name'], data['borrower_lastname'])
         return redirect(url_for('book_details', book_id=book_id))
     return redirect(url_for('book_details', book_id=book_id))
 
 
+@app.route("/giveback/<int:book_id>/", methods=['GET'])
+def give_back(book_id):
+    print('yes')
+    BorrowedBookCard().give_back_book(book_id)
+    return redirect(url_for('book_details', book_id=book_id))
