@@ -81,6 +81,5 @@ def borrow(book_id):
 
 @app.route("/giveback/<int:book_id>/", methods=['GET'])
 def give_back(book_id):
-    print('yes')
     BorrowedBookCard().give_back_book(book_id)
     return redirect(url_for('book_details', book_id=book_id))
