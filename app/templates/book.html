@@ -18,10 +18,22 @@
     <form method="POST" action="/delete/{{ book.id }}/">
         <input type="submit" value="Usuń">
     </form>
-    <p>Status książki: <span style="color: lime">{{ book.status.upper() }}</span></p>
 
-    <form method="POST" action="/borrow/{{ book.id }}/">
+
+    {% if book.status.upper() == 'POŻYCZONA' %}
+    <p>Status książki: <span style="color: red">{{ book.status.upper() }}</span></p>
+    <form method="GET" action="/giveback/{{ book.id }}/">
+        <input type="submit" value="Oddaj">
+    </form>
+    {% else %}
+    <p>Status książki: <span style="color: lime">{{ book.status.upper() }}</span></p>
+    <form method="GET" action="/library/lend/{{ book.id }}/">
         <input type="submit" value="Pożycz">
+    </form>
+    {% endif %}
+    <br>
+    <form method="GET" action="/library/">
+        <input type="submit" value="Katalog książek">
     </form>
 </body>
 </html
